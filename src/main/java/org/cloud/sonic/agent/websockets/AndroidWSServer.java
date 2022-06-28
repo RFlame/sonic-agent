@@ -60,7 +60,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 @Component
-@ServerEndpoint(value = "/websockets/android/{key}/{udId}/{token}/{isAutoInit}", configurator = WsEndpointConfigure.class)
+@ServerEndpoint(value = "/websockets/android/{key}/{udId}/{token}/{isAutoInit}/{androidPackageName}/{appActivity}", configurator = WsEndpointConfigure.class)
 public class AndroidWSServer implements IAndroidWSServer {
 
     private final Logger logger = LoggerFactory.getLogger(AndroidWSServer.class);
@@ -82,7 +82,10 @@ public class AndroidWSServer implements IAndroidWSServer {
 
     @OnOpen
     public void onOpen(Session session, @PathParam("key") String secretKey,
-                       @PathParam("udId") String udId, @PathParam("token") String token, @PathParam("isAutoInit") Integer isAutoInit) throws Exception {
+                       @PathParam("udId") String udId, @PathParam("token") String token,
+                       @PathParam("isAutoInit") Integer isAutoInit,
+                       @PathParam("androidPackageName") String androidPackageName,
+                       @PathParam("appActivity") String appActivity) throws Exception {
         if (secretKey.length() == 0 || (!secretKey.equals(key)) || token.length() == 0 || isAutoInit == null) {
             logger.info("拦截访问！");
             return;
@@ -278,7 +281,15 @@ public class AndroidWSServer implements IAndroidWSServer {
         }
 
         if (isAutoInit == 1) {
-            openDriver(iDevice, session);
+            logger.info("onOpen androidPackageName:" + androidPackageName + ",appActivity:" + appActivity + ",udId:" + udId);
+            JSONObject capability = null;
+            if(androidPackageName != null && appActivity != null
+                    && !androidPackageName.equals("null") && !appActivity.equals("null")) {
+                capability = new JSONObject();
+                capability.put("androidPackageName", androidPackageName);
+                capability.put("appActivity", appActivity);
+            }
+            openDriver(iDevice, session, capability);
         }
     }
 
@@ -553,7 +564,10 @@ public class AndroidWSServer implements IAndroidWSServer {
                     }
                     case "openDriver": {
                         if (androidStepHandler == null || androidStepHandler.getAndroidDriver() == null) {
-                            openDriver(iDevice, session);
+                            if (msg.getString("detail").equals("openDriver")) {
+                                JSONObject capability = msg.getJSONObject("capability");
+                                openDriver(iDevice, session, capability);
+                            }
                         }
                         break;
                     }
@@ -607,7 +621,7 @@ public class AndroidWSServer implements IAndroidWSServer {
         }
     }
 
-    private void openDriver(IDevice iDevice, Session session) {
+    private void openDriver(IDevice iDevice, Session session, JSONObject capability) {
         if (isEnableAppium) {
             AndroidStepHandler androidStepHandler = new AndroidStepHandler();
             androidStepHandler.setTestMode(0, 0, iDevice.getSerialNumber(), DeviceStatus.DEBUGGING, session.getId());
@@ -616,7 +630,7 @@ public class AndroidWSServer implements IAndroidWSServer {
             AndroidDeviceThreadPool.cachedThreadPool.execute(() -> {
                 try {
                     AndroidDeviceLocalStatus.startDebug(iDevice.getSerialNumber());
-                    finalAndroidStepHandler1.startAndroidDriver(iDevice.getSerialNumber());
+                    finalAndroidStepHandler1.startAndroidDriver(iDevice.getSerialNumber(), capability);
                     result.put("status", "success");
                     result.put("detail", "初始化Driver完成！");
                     HandlerMap.getAndroidMap().put(session.getId(), finalAndroidStepHandler1);

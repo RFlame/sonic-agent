@@ -59,6 +59,8 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.remote.DesiredCapabilities;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Base64Utils;
 import org.springframework.util.FileCopyUtils;
 
@@ -78,6 +80,7 @@ import static org.testng.Assert.*;
  * @date 2021/8/16 20:10
  */
 public class AndroidStepHandler {
+    private static final Logger logger = LoggerFactory.getLogger(AndroidStepHandler.class);
     public LogUtil log = new LogUtil();
     private AndroidDriver androidDriver;
     private JSONObject globalParams = new JSONObject();
@@ -124,7 +127,7 @@ public class AndroidStepHandler {
      * @des 启动安卓驱动，连接设备
      * @date 2021/8/16 20:01
      */
-    public void startAndroidDriver(String udId) throws InterruptedException {
+    public void startAndroidDriver(String udId, JSONObject capability) throws InterruptedException {
         this.udId = udId;
         DesiredCapabilities desiredCapabilities = new DesiredCapabilities();
         //微信webView配置
@@ -161,6 +164,17 @@ public class AndroidStepHandler {
         //随机systemPort
         desiredCapabilities.setCapability(AndroidMobileCapabilityType.SYSTEM_PORT, PortTool.getPort());
         desiredCapabilities.setCapability("skipLogcatCapture", true);
+
+        if(capability != null && capability.containsKey("androidPackageName") && capability.containsKey("appActivity")) {
+            String androidPackageName = (String) capability.get("androidPackageName");
+            String appActivity = (String) capability.get("appActivity");
+            if(androidPackageName != null && appActivity != null
+                    && !androidPackageName.isEmpty() && !appActivity.isEmpty()) {
+                desiredCapabilities.setCapability("appium:appPackage", androidPackageName);
+                desiredCapabilities.setCapability("appium:appActivity", appActivity);
+            }
+        }
+        logger.info("startAndroidDriver desiredCapabilities:" + desiredCapabilities.toJson());
         try {
             AppiumServer.start(udId);
             androidDriver = new AndroidDriver(AppiumServer.serviceMap.get(udId).getUrl(), desiredCapabilities);

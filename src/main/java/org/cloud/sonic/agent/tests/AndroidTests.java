@@ -61,6 +61,9 @@ public class AndroidTests {
             JSONObject gp = iDevice.getJSONObject("gp");
             deviceTestData.put("gp", gp);
             deviceTestData.put("device", iDevice);
+            /// 获取capability
+            JSONObject capability = dataInfo.getJSONObject("capability");
+            deviceTestData.put("capability", capability);
             dataProvider.add(deviceTestData);
         }
         Object[][] testDataProvider = new Object[dataProvider.size()][];

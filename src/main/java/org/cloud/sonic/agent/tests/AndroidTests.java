@@ -56,7 +56,10 @@ public class AndroidTests {
             deviceTestData.put("steps", dataInfo.getJSONArray("steps"));
             deviceTestData.put("rid", dataInfo.getInteger("rid"));
             deviceTestData.put("cid", dataInfo.getInteger("cid"));
-            deviceTestData.put("gp", dataInfo.getJSONObject("gp"));
+            /*deviceTestData.put("gp", dataInfo.getJSONObject("gp"));*/
+            // 根据设备选择不同的全局参数
+            JSONObject gp = iDevice.getJSONObject("gp");
+            deviceTestData.put("gp", gp);
             deviceTestData.put("device", iDevice);
             dataProvider.add(deviceTestData);
         }

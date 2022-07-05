@@ -38,7 +38,7 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 public class SIFTFinder {
     private final Logger logger = LoggerFactory.getLogger(SIFTFinder.class);
 
-    public FindResult getSIFTFindResult(File temFile, File beforeFile) throws Exception {
+    public FindResult getSIFTFindResult(File temFile, File beforeFile, org.openqa.selenium.Point assistedPoint) throws Exception {
         Mat image01 = imread(beforeFile.getAbsolutePath());
         Mat image02 = imread(temFile.getAbsolutePath());
 
@@ -71,7 +71,7 @@ public class SIFTFinder {
                 DMatch match1 = matchPoints.get(i).get(0);
                 DMatch match2 = matchPoints.get(i).get(1);
 
-                if (match1.distance() <= 0.6 * match2.distance()) {
+                if (match1.distance() <= 0.3 * match2.distance()) {
                     xs.add((int) keyPointVector1.get(match1.queryIdx()).pt().x());
                     ys.add((int) keyPointVector1.get(match1.queryIdx()).pt().y());
                     goodMatches.push_back(matchPoints.get(i));
@@ -90,12 +90,38 @@ public class SIFTFinder {
 
         drawMatchesKnn(image01, keyPointVector1, image02, keyPointVector2, goodMatches, result);
 
-        int resultX = majorityElement(xs);
-        int resultY = majorityElement(ys);
+        //选取匹配到的坐标位置，如果有辅助控件的坐标，选取和辅助控件最相近的匹配坐标
+        int resultX = 0;
+        int resultY = 0;
+        if(assistedPoint != null) {
+            logger.info("辅助定位控件坐标为（" + assistedPoint.x + "," + assistedPoint.y + ")");
+            circle(result, new Point(assistedPoint.x, assistedPoint.y), 5, Scalar.YELLOW, 10, CV_AA, 0);
+            double distance = 10000;
+            for(int i = 0; i < xs.size(); i++) {
+                int x = xs.get(i);
+                int y = ys.get(i);
+                logger.info("坐标为（" + x + "," + y + ")");
+                org.openqa.selenium.Point point = new org.openqa.selenium.Point(x, y);
+                if(point.y >= assistedPoint.y) {
+                    double d = point.y - assistedPoint.y;
+                    logger.info("与辅助定位控件距离：" + d);
+                    if(d < distance) {
+                        distance = d;
+                        resultX = x;
+                        resultY = y;
+                    }
+                }
+            }
+        }
+        if(resultX == 0 && resultY == 0) {
+            resultX = majorityElement(xs);
+            resultY = majorityElement(ys);
+        }
         findResult.setX(resultX);
         findResult.setY(resultY);
         logger.info("结果坐标为（" + resultX + "," + resultY + ")");
         circle(result, new Point(resultX, resultY), 5, Scalar.RED, 10, CV_AA, 0);
+
         long time = Calendar.getInstance().getTimeInMillis();
         String fileName = "test-output" + File.separator + time + ".jpg";
         imwrite(fileName, result);

@@ -974,7 +974,8 @@ public class AndroidStepHandler {
         }
     }
 
-    public void clickByImg(HandleDes handleDes, String des, String pathValue) throws Exception {
+    public void clickByImg(HandleDes handleDes, String des, String pathValue, String assistedValue) throws Exception {
+        logger.info("clickByImg assistedValue:" + assistedValue);
         handleDes.setStepDes("点击图片" + des);
         handleDes.setDetail(pathValue);
         File file = null;
@@ -987,9 +988,13 @@ public class AndroidStepHandler {
             }
         }
         FindResult findResult = null;
+        Point assistedPoint = null;
         try {
+            if(assistedValue != null && !assistedValue.isEmpty()) {
+                assistedPoint = findEle("xpath", assistedValue).getLocation();
+            }
             SIFTFinder siftFinder = new SIFTFinder();
-            findResult = siftFinder.getSIFTFindResult(file, getScreenToLocal());
+            findResult = siftFinder.getSIFTFindResult(file, getScreenToLocal(), assistedPoint);
         } catch (Exception e) {
             log.sendStepLog(StepType.WARN, "SIFT图像算法出错，切换算法中...",
                     "");
@@ -1541,7 +1546,8 @@ public class AndroidStepHandler {
                 break;
             case "clickByImg":
                 clickByImg(handleDes, eleList.getJSONObject(0).getString("eleName")
-                        , eleList.getJSONObject(0).getString("eleValue"));
+                        , eleList.getJSONObject(0).getString("eleValue"),
+                        eleList.getJSONObject(0).getString("eleAssisted"));
                 break;
             case "click":
                 click(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")

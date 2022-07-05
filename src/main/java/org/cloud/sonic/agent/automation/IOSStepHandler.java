@@ -54,10 +54,7 @@ import org.cloud.sonic.agent.tools.SpringTool;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Document;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.Platform;
-import org.openqa.selenium.TakesScreenshot;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.springframework.util.Base64Utils;
 import org.springframework.util.FileCopyUtils;
@@ -617,7 +614,7 @@ public class IOSStepHandler {
         }
     }
 
-    public void clickByImg(HandleDes handleDes, String des, String pathValue) throws Exception {
+    public void clickByImg(HandleDes handleDes, String des, String pathValue, String assistedValue) throws Exception {
         handleDes.setStepDes("点击图片" + des);
         handleDes.setDetail(pathValue);
         File file = null;
@@ -629,10 +626,14 @@ public class IOSStepHandler {
                 return;
             }
         }
+        Point assistedPoint = null;
+        if(assistedValue != null && !assistedValue.isEmpty()) {
+            assistedPoint = findEle("xpath", assistedValue).getLocation();
+        }
         FindResult findResult = null;
         try {
             SIFTFinder siftFinder = new SIFTFinder();
-            findResult = siftFinder.getSIFTFindResult(file, getScreenToLocal());
+            findResult = siftFinder.getSIFTFindResult(file, getScreenToLocal(), assistedPoint);
         } catch (Exception e) {
             log.sendStepLog(StepType.WARN, "SIFT图像算法出错，切换算法中...",
                     "");
@@ -853,7 +854,8 @@ public class IOSStepHandler {
                 break;
             case "clickByImg":
                 clickByImg(handleDes, eleList.getJSONObject(0).getString("eleName")
-                        , eleList.getJSONObject(0).getString("eleValue"));
+                        , eleList.getJSONObject(0).getString("eleValue"),
+                        eleList.getJSONObject(0).getString("eleAssisted"));
                 break;
             case "click":
                 click(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")

@@ -94,17 +94,15 @@ public class SIFTFinder {
         int resultX = 0;
         int resultY = 0;
         if(assistedPoint != null) {
-            logger.info("辅助定位控件坐标为（" + assistedPoint.x + "," + assistedPoint.y + ")");
-            circle(result, new Point(assistedPoint.x, assistedPoint.y), 5, Scalar.YELLOW, 10, CV_AA, 0);
+            circle(result, new Point(assistedPoint.x, assistedPoint.y), 5, Scalar.GREEN, 10, CV_AA, 0);
             double distance = 10000;
             for(int i = 0; i < xs.size(); i++) {
                 int x = xs.get(i);
                 int y = ys.get(i);
-                logger.info("坐标为（" + x + "," + y + ")");
                 org.openqa.selenium.Point point = new org.openqa.selenium.Point(x, y);
+                // 优先去辅助控件下方的控件作为目标控件
                 if(point.y >= assistedPoint.y) {
                     double d = point.y - assistedPoint.y;
-                    logger.info("与辅助定位控件距离：" + d);
                     if(d < distance) {
                         distance = d;
                         resultX = x;

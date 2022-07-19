@@ -145,7 +145,9 @@ public class AndroidWSServer implements IAndroidWSServer {
                     .replaceAll("\t", "");
         }
         AndroidAPKMap.getMap().put(udId, true);
-        AndroidDeviceBridgeTool.pressKey(iDevice, 3);
+        if (AndroidDeviceBridgeTool.getOrientation(iDevice) != 0) {
+            AndroidDeviceBridgeTool.pressKey(iDevice, 3);
+        }
         Semaphore isTouchFinish = new Semaphore(0);
         String finalPath = path;
 
@@ -161,7 +163,7 @@ public class AndroidWSServer implements IAndroidWSServer {
                                 if (res.contains("Address already in use")) {
                                     NotStopSession.add(session);
                                 }
-                                if (res.contains("starting：start()")) {
+                                if (res.startsWith("starting")) {
                                     isTouchFinish.release();
                                 }
                             }
@@ -316,7 +318,7 @@ public class AndroidWSServer implements IAndroidWSServer {
     @OnMessage
     public void onMessage(String message, Session session) {
         JSONObject msg = JSON.parseObject(message);
-        logger.info("{} send: {}",session.getId(), msg);
+        logger.info("{} send: {}", session.getId(), msg);
         IDevice iDevice = udIdMap.get(session);
         switch (msg.getString("type")) {
             case "poco": {
@@ -610,6 +612,7 @@ public class AndroidWSServer implements IAndroidWSServer {
                                     result.put("img", UploadTools.upload(finalAndroidStepHandler.findEle("xpath", msg.getString("xpath")).getScreenshotAs(OutputType.FILE), "keepFiles"));
                                 } catch (Exception e) {
                                     result.put("errMsg", "获取元素截图失败！");
+                                    e.printStackTrace();
                                 }
                                 BytesTool.sendText(session, result.toJSONString());
                             });
@@ -655,13 +658,17 @@ public class AndroidWSServer implements IAndroidWSServer {
         AndroidDeviceLocalStatus.finish(session.getUserProperties().get("udId") + "");
         IDevice iDevice = udIdMap.get(session);
         try {
-            HandlerMap.getAndroidMap().get(session.getId()).closeAndroidDriver();
+            AndroidStepHandler androidStepHandler = HandlerMap.getAndroidMap().get(session.getId());
+            if (androidStepHandler != null) {
+                androidStepHandler.closeAndroidDriver();
+            }
         } catch (Exception e) {
             logger.info("关闭driver异常!");
         } finally {
             HandlerMap.getAndroidMap().remove(session.getId());
         }
         if (iDevice != null) {
+            AndroidDeviceBridgeTool.executeCommand(iDevice, "am force-stop org.cloud.sonic.android");
             AndroidDeviceBridgeTool.clearProxy(iDevice);
             List<JSONObject> has = webViewForwardMap.get(iDevice);
             if (has != null && has.size() > 0) {
@@ -689,6 +696,6 @@ public class AndroidWSServer implements IAndroidWSServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        logger.info("{} : quit.",session.getId());
+        logger.info("{} : quit.", session.getId());
     }
 }

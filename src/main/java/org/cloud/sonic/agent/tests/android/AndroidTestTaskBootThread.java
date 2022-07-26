@@ -88,6 +88,11 @@ public class AndroidTestTaskBootThread extends Thread {
      */
     private String udId;
 
+    /**
+     * 启动Android Driver capability
+     */
+    private JSONObject capability;
+
     public String formatThreadName(String baseFormat) {
         return String.format(baseFormat, this.resultId, this.caseId, this.udId);
     }
@@ -114,6 +119,7 @@ public class AndroidTestTaskBootThread extends Thread {
         this.udId = jsonObject.getJSONObject("device") == null? jsonObject.getString("udId") :
                 jsonObject.getJSONObject("device").getString("udId");
 
+        this.capability = jsonObject.getJSONObject("capability");
         // 比如：test-task-thread-af80d1e4
         this.setName(String.format(ANDROID_TEST_TASK_BOOT_PRE, resultId, caseId, udId));
         this.setDaemon(true);
@@ -196,7 +202,7 @@ public class AndroidTestTaskBootThread extends Thread {
             startTestSuccess = true;
             //启动测试
             try {
-                androidStepHandler.startAndroidDriver(udId);
+                androidStepHandler.startAndroidDriver(udId, capability);
             } catch (Exception e) {
                 log.error(e.getMessage());
                 androidStepHandler.closeAndroidDriver();

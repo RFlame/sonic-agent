@@ -762,22 +762,22 @@ public class AndroidStepHandler {
         }
     }
 
-    public void click(HandleDes handleDes, String des, String selector, String pathValue) {
+    public void click(HandleDes handleDes, String des, String selector, String pathValue, String assistedText) {
         handleDes.setStepDes("点击" + des);
         handleDes.setDetail("点击" + selector + ": " + pathValue);
         try {
-            findEle(selector, pathValue).click();
+            findEle(selector, pathValue, assistedText).click();
         } catch (Exception e) {
             handleDes.setE(e);
         }
     }
 
-    public void sendKeys(HandleDes handleDes, String des, String selector, String pathValue, String keys) {
+    public void sendKeys(HandleDes handleDes, String des, String selector, String pathValue, String keys, String assistedText) {
         keys = TextHandler.replaceTrans(keys, globalParams);
         handleDes.setStepDes("对" + des + "输入内容");
         handleDes.setDetail("对" + selector + ": " + pathValue + " 输入: " + keys);
         try {
-            findEle(selector, pathValue).sendKeys(keys);
+            findEle(selector, pathValue, assistedText).sendKeys(keys);
         } catch (Exception e) {
             handleDes.setE(e);
         }
@@ -908,12 +908,12 @@ public class AndroidStepHandler {
         }
     }
 
-    public void longPress(HandleDes handleDes, String des, String selector, String pathValue, int time) {
+    public void longPress(HandleDes handleDes, String des, String selector, String pathValue, int time, String assistedText) {
         handleDes.setStepDes("长按" + des);
         handleDes.setDetail("长按控件元素" + time + "毫秒 ");
         try {
             TouchAction ta = new TouchAction(androidDriver);
-            WebElement webElement = findEle(selector, pathValue);
+            WebElement webElement = findEle(selector, pathValue, assistedText);
             int x = webElement.getLocation().getX();
             int y = webElement.getLocation().getY();
             Duration duration = Duration.ofMillis(time);
@@ -933,12 +933,12 @@ public class AndroidStepHandler {
         }
     }
 
-    public void isExistEle(HandleDes handleDes, String des, String selector, String pathValue, boolean expect) {
+    public void isExistEle(HandleDes handleDes, String des, String selector, String pathValue, boolean expect, String assistedText) {
         handleDes.setStepDes("判断控件 " + des + " 是否存在");
         handleDes.setDetail("期望值：" + (expect ? "存在" : "不存在"));
         boolean hasEle = false;
         try {
-            WebElement w = findEle(selector, pathValue);
+            WebElement w = findEle(selector, pathValue, assistedText);
             if (w != null) {
                 hasEle = true;
             }
@@ -1008,11 +1008,12 @@ public class AndroidStepHandler {
             if(assistedValue != null && !assistedValue.isEmpty()) {
                 assistedPoint = findEle("xpath", assistedValue).getLocation();
             }
+            logger.info("assistedPoint:" + assistedPoint);
             SIFTFinder siftFinder = new SIFTFinder();
             findResult = siftFinder.getSIFTFindResult(file, getScreenToLocal(), assistedPoint);
         } catch (Exception e) {
             log.sendStepLog(StepType.WARN, "SIFT图像算法出错，切换算法中...",
-                    "");
+                    e.getMessage());
         }
         if (findResult != null) {
             log.sendStepLog(StepType.INFO, "图片定位到坐标：(" + findResult.getX() + "," + findResult.getY() + ")  耗时：" + findResult.getTime() + " ms",
@@ -1476,11 +1477,15 @@ public class AndroidStepHandler {
     }
 
     public WebElement findEle(String selector, String pathValue) {
+        return findEle(selector, pathValue, null);
+    }
+
+    public WebElement findEle(String selector, String pathValue, String text) {
         WebElement we = null;
         pathValue = TextHandler.replaceTrans(pathValue, globalParams);
         switch (selector) {
             case "id":
-                we = androidDriver.findElementById(pathValue);
+                we = getWebElementById(pathValue, text);
                 break;
             case "accessibilityId":
                 we = androidDriver.findElementByAccessibilityId(pathValue);
@@ -1515,6 +1520,25 @@ public class AndroidStepHandler {
             default:
                 log.sendStepLog(StepType.ERROR, "查找控件元素失败", "这个控件元素类型: " + selector + " 不存在!!!");
                 break;
+        }
+        return we;
+    }
+
+    private WebElement getWebElementById(String pathValue, String text) {
+        WebElement we = null;
+        if(text == null || text.isEmpty()) {
+            we = androidDriver.findElementById(pathValue);
+        } else {
+            // 如果有辅助定位文案，切换为根据文案匹配控件元素
+            List<WebElement> els = androidDriver.findElements(By.id(pathValue));
+            if(els != null && els.size() > 0) {
+                for(WebElement element : els) {
+                    if(element.getText().equals(text)) {
+                        we = element;
+                        break;
+                    }
+                }
+            }
         }
         return we;
     }
@@ -1569,7 +1593,7 @@ public class AndroidStepHandler {
                 break;
             case "click":
                 click(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")
-                        , eleList.getJSONObject(0).getString("eleValue"));
+                        , eleList.getJSONObject(0).getString("eleValue"), eleList.getJSONObject(0).getString("eleAssisted"));
                 break;
             case "getTitle":
                 getTitle(handleDes, step.getString("content"));
@@ -1583,7 +1607,7 @@ public class AndroidStepHandler {
                 break;
             case "sendKeys":
                 sendKeys(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")
-                        , eleList.getJSONObject(0).getString("eleValue"), step.getString("content"));
+                        , eleList.getJSONObject(0).getString("eleValue"), step.getString("content"), eleList.getJSONObject(0).getString("eleAssisted"));
                 break;
             case "sendKeysByActions":
                 sendKeysByActions(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")
@@ -1595,7 +1619,7 @@ public class AndroidStepHandler {
                 break;
             case "isExistEle":
                 isExistEle(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")
-                        , eleList.getJSONObject(0).getString("eleValue"), step.getBoolean("content"));
+                        , eleList.getJSONObject(0).getString("eleValue"), step.getBoolean("content"), eleList.getJSONObject(0).getString("eleAssisted"));
                 break;
             case "clear":
                 clear(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")
@@ -1603,7 +1627,7 @@ public class AndroidStepHandler {
                 break;
             case "longPress":
                 longPress(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleType")
-                        , eleList.getJSONObject(0).getString("eleValue"), Integer.parseInt(step.getString("content")));
+                        , eleList.getJSONObject(0).getString("eleValue"), Integer.parseInt(step.getString("content")), eleList.getJSONObject(0).getString("eleAssisted"));
                 break;
             case "swipe":
                 swipePoint(handleDes, eleList.getJSONObject(0).getString("eleName"), eleList.getJSONObject(0).getString("eleValue")
